@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stress Management System — for IT Professionals</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="scanline"></div>
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="topbar" id="topbar" style="display: none;">
+    <div class="topbar__brand">
+      <div class="dot"></div>
+      <span class="brand-name">STRESS.SYS</span>
+    </div>
+    <div class="topbar__user">
+      <span class="user-name" id="displayUsername">Developer</span>
+      <button class="theme-toggle" id="themeToggleBtn" title="Toggle Theme">🌙</button>
+      <button class="btn btn--text logout-trigger">Logout</button>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <!-- 1. LOGIN SCREEN -->
+    <section id="screenLogin" class="screen screen--active">
+      <div class="auth-card">
+        <div class="auth-brand">
+          <div class="dot"></div>
+          <span>STRESS.SYS</span>
+        </div>
+        <p class="auth-tagline">De-stress toolkit built for IT professionals</p>
+        <h2 class="auth-heading">System Login</h2>
+        
+        <form class="auth-form" id="loginForm">
+          <input type="text" id="loginUser" placeholder="Username" required>
+          <input type="password" id="loginPass" placeholder="Password" required>
+          <button type="submit" class="btn btn--primary auth-submit">Login & Begin</button>
+          <p class="auth-error" id="loginError"></p>
+        </form>
+
+        <p class="auth-hint" style="margin-top: 15px;">Data is processed locally in your browser.</p>
+      </div>
+    </section>
+
+    <!-- 2. MANDATORY ASSESSMENT QUIZ SCREEN -->
+    <section id="screenAssess" class="screen">
+      <p class="eyebrow">DIAGNOSTICS</p>
+      <h2>Mandatory Stress Assessment</h2>
+      <p class="section-sub">Answer these short questions so we can calculate your stress level and assign the exact relief game you need.</p>
+      
+      <div class="quiz-card" id="quizContainer">
+        <div class="quiz-progress">
+          <div class="quiz-progress__bar" id="quizProgressBar"></div>
+        </div>
+        <p class="quiz-count" id="quizCount">Question 1 of 10</p>
+        <h3 class="quiz-question" id="quizQuestionText">Loading question...</h3>
+        
+        <div class="quiz-options" id="quizOptions"></div>
+      </div>
+    </section>
+
+    <!-- 3. MATCHED GAME & 3-MINUTE TIMER SCREEN -->
+    <section id="screenGameLauncher" class="screen">
+      <div class="auth-card" style="max-width: 650px; text-align: center;">
+        <span id="displayStressLevel" class="eyebrow" style="color: var(--amber, #f59e0b);">CALCULATING STRESS...</span>
+        <h2 id="matchedGameTitle">Assigned Activity</h2>
+        <p class="section-sub" id="matchedGameDesc">Loading activity details...</p>
+        
+        <!-- 3 Minute Timer Display -->
+        <div id="gameTimerDisplay" style="font-size: 1.8rem; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: var(--sage, #10b981); margin: 20px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+          Time Remaining: 03:00
+        </div>
+
+        <div id="activeGameContainer" style="margin: 20px 0; min-height: 120px;"></div>
+
+        <div style="margin-top: 20px;">
+          <button class="btn btn--ghost" onclick="forceFinishGame()">Finish Session Early</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. SUCCESS & THANK YOU SCREEN -->
+    <section id="screenSuccessExit" class="screen">
+      <div class="auth-card" style="text-align: center; max-width: 550px;">
+        <h2 style="color: var(--sage, #10b981);">🎉 Congratulations!</h2>
+        <p class="section-sub" style="margin: 15px 0;">
+          Thank you for visiting our Stress Management System! We are glad that the 3-minute session helped you recharge. Have a peaceful and productive workday ahead!
+        </p>
+        <button class="btn btn--primary logout-trigger" style="margin-top: 15px;">Logout / Exit System</button>
+      </div>
+    </section>
+
+    <!-- 5. ADVANCED RELIEF SCREEN (LOCAL ASSETS WITH CHOICE, HEADPHONE NOTICE & FEEDBACK) -->
+    <section id="screenAdvancedRelief" class="screen">
+      <div class="auth-card" style="max-width: 720px; text-align: center;">
+        <p class="eyebrow" style="color: #60a5fa;">DEEP RELAXATION ZONE</p>
+        <h2>Advanced Stress Relief</h2>
+        <p class="section-sub">For the best possible results, please use <strong>Headphones</strong> and choose your preferred relaxation mode below.</p>
+
+        <!-- Mode Selection: Audio Only or Video Experience -->
+        <div style="margin: 20px 0; display: flex; justify-content: center; gap: 15px;">
+          <button id="modeAudioBtn" class="btn btn--primary" onclick="switchReliefMode('audio')">🎧 Audio Soundscape Only</button>
+          <button id="modeVideoBtn" class="btn btn--ghost" onclick="switchReliefMode('video')">🎬 Video & Audio Experience</button>
+        </div>
+
+        <!-- Audio Container -->
+        <div id="audioModeContainer" style="margin: 15px 0; display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <label for="soundSelect" style="font-size: 0.9rem; color: #a1a1aa;">Choose Sound:</label>
+            <select id="soundSelect" style="padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+              <option value="assets/sounds/aquarium.mpeg">🐟 Aquarium / Water Sound</option>
+              <option value="assets/sounds/ocean.mpeg">🌊 Ocean Waves Sound</option>
+              <option value="assets/sounds/rain.mpeg">🌧️ Relaxing Rain Sound</option>
+              <option value="assets/sounds/ambient.mpeg">🎵 Calm Ambient Music</option>
+            </select>
+          </div>
+          <button id="toggleSoundBtn" class="btn btn--primary">🔊 Play Selected Sound</button>
+          <audio id="calmAudioPlayer" loop src="assets/sounds/aquarium.mpeg"></audio>
+        </div>
+
+        <!-- Video Container (Hidden by default) -->
+        <div id="videoModeContainer" style="display: none; position: relative; width: 100%; aspect-ratio: 16/9; overflow: hidden; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); background: #000; margin-top: 15px;">
+          <video 
+            id="fishVideoLocal"
+            autoplay 
+            loop 
+            muted 
+            playsinline 
+            controls
+            style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            <source src="assets/videos/aquarium.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        
+        <!-- Feedback and Actions Section -->
+        <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+          <div id="feedbackSection" style="margin-bottom: 15px;">
+            <p style="font-size: 0.95rem; margin-bottom: 10px; color: #e2e8f0;">How was your relaxation experience? Give your feedback:</p>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+              <button class="btn btn--primary feedback-btn" onclick="submitAdvancedFeedback('good')">😊 Very Relaxing (Good)</button>
+              <button class="btn btn--ghost feedback-btn" onclick="submitAdvancedFeedback('bad_try')">🔄 Still Stressed (Try Again)</button>
+              <button class="btn btn--ghost feedback-btn logout-trigger" onclick="submitAdvancedFeedback('bad_exit')" style="border-color: #ef4444; color: #ef4444;">❌ Still Stressed (Exit Now)</button>
+            </div>
+            <p id="feedbackResponseMsg" style="font-size: 0.95rem; font-weight: 500; display: none; margin-top: 10px;"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- POST-GAME BELIEF VERIFICATION MODAL -->
+  <div id="verificationModal" class="rating-modal" hidden>
+    <div class="rating-modal__card" style="text-align: center; max-width: 480px;">
+      <h3 class="rating-modal__title">🎉 3-Minute Session Complete!</h3>
+      <p class="section-sub" style="font-size: 0.95rem; margin: 15px 0;">
+        Do you feel that your stress level has been significantly reduced after completing this activity?
+      </p>
+      
+      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+        <button class="btn btn--primary" onclick="handleUserBelief(true)">Yes, I feel better!</button>
+        <button class="btn btn--ghost" onclick="handleUserBelief(false)">No, still stressed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div>STRESS.SYS — Client-Side Stress Management System for IT Professionals</div>
+    <div class="footer-credit">Created by <strong>Malinga Prabath</strong></div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
