@@ -1,0 +1,102 @@
+---
+import { t, type Lang } from '../data/i18n';
+interface Props { lang: Lang }
+const u = t(Astro.props.lang);
+---
+<section class="pt-6">
+  <h1 class="text-4xl font-semibold tracking-tight">{u.logTitle}</h1>
+  <p class="mt-3 text-lg text-muted">{u.logIntro}</p>
+</section>
+
+<div class="mt-8 grid gap-4 sm:grid-cols-3">
+  <div class="card p-5"><p class="text-sm text-muted">{u.avg7}</p><p id="s-avg" class="mt-1 text-3xl font-semibold">–</p></div>
+  <div class="card p-5"><p class="text-sm text-muted">{u.avgDrop}</p><p id="s-drop" class="mt-1 text-3xl font-semibold">–</p></div>
+  <div class="card p-5"><p class="text-sm text-muted">{u.checkins}</p><p id="s-count" class="mt-1 text-3xl font-semibold">0</p></div>
+</div>
+
+<section class="card mt-6 p-6">
+  <h2 class="text-xl font-semibold">{u.last30}</h2>
+  <div id="chart" class="mt-4"></div>
+  <p id="chart-none" class="mt-2 text-muted">{u.none}</p>
+</section>
+
+<div class="mt-6 grid gap-6 md:grid-cols-2">
+  <section class="card p-6"><h2 class="text-xl font-semibold">{u.pssHistory}</h2><ul id="checks" class="mt-4 space-y-3"></ul></section>
+  <section class="card p-6"><h2 class="text-xl font-semibold">{u.sessions}</h2><ul id="sessions" class="mt-4 space-y-2"></ul></section>
+</div>
+
+<section class="mt-6 flex flex-wrap gap-3">
+  <button id="csv" type="button" class="btn btn-line">{u.exportCsv}</button>
+  <button id="backup" type="button" class="btn btn-line">{u.backup}</button>
+  <label class="btn btn-line cursor-pointer">{u.restore}<input id="restore" type="file" accept="application/json,.json" class="sr-only" /></label>
+  <button id="wipe" type="button" class="btn btn-line ml-auto text-alert">{u.deleteAll}</button>
+  <p id="msg" class="w-full text-sm font-medium text-leaf" role="status"></p>
+</section>
+
+<script>
+  import { load, save, clearAll, level, today, type Data } from '../lib/store';
+  import { ui } from '../data/i18n';
+  const L = document.documentElement.lang === 'si' ? 'si' : 'en';
+  const u = ui[L];
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  const day = (offset: number) => { const d = new Date(); d.setDate(d.getDate() - offset); return d.toLocaleDateString('en-CA'); };
+  const levelColor = { low: 'var(--color-leaf)', moderate: 'var(--color-sand)', high: 'var(--color-alert)' };
+
+  function chart(d: Data) {
+    const W = 600, H = 220, P = 28;
+    const days = Array.from({ length: 30 }, (_, i) => day(29 - i));
+    const pts = days.map((date, i) => ({ i, date, c: d.checkins.find((x) => x.date === date) })).filter((p) => p.c);
+    document.getElementById('chart-none')!.hidden = pts.length > 0;
+    if (!pts.length) { document.getElementById('chart')!.innerHTML = ''; return; }
+    const x = (i: number) => P + (i * (W - P * 2)) / 29;
+    const y = (v: number) => H - P - (v * (H - P * 2)) / 10;
+    const line = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.c!.mood).toFixed(1)}`).join(' ');
+    const grid = [0, 5, 10].map((v) => `<line x1="${P}" x2="${W - P}" y1="${y(v)}" y2="${y(v)}" stroke="var(--color-line)"/><text x="${P - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--color-muted)">${v}</text>`).join('');
+    const labels = [0, 14, 29].map((i) => `<text x="${x(i)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--color-muted)">${days[i].slice(5)}</text>`).join('');
+    const dots = pts.map((p) => `<circle cx="${x(p.i)}" cy="${y(p.c!.mood)}" r="5" fill="var(--color-calm)"><title>${p.date}: ${p.c!.mood}/10${p.c!.note ? ' · ' + esc(p.c!.note) : ''}</title></circle>`).join('');
+    document.getElementById('chart')!.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="w-full" role="img" aria-label="${esc(u.last30)}">${grid}${labels}<path d="${line}" fill="none" stroke="var(--color-calm)" stroke-width="2.5" stroke-linejoin="round"/>${dots}</svg>`;
+  }
+
+  function render() {
+    const d = load();
+    const week = d.checkins.filter((c) => c.date > day(7));
+    document.getElementById('s-avg')!.textContent = week.length ? (week.reduce((s, c) => s + c.mood, 0) / week.length).toFixed(1) + ' / 10' : '–';
+    const rated = d.sessions.filter((s) => s.before != null && s.after != null);
+    document.getElementById('s-drop')!.textContent = rated.length ? (rated.reduce((s, x) => s + (x.before! - x.after!), 0) / rated.length).toFixed(1) : '–';
+    document.getElementById('s-count')!.textContent = String(d.checkins.length);
+    chart(d);
+
+    document.getElementById('checks')!.innerHTML = d.checks.length
+      ? [...d.checks].reverse().slice(0, 8).map((c) => { const lv = level(c.score); return `<li><div class="flex justify-between text-sm"><span class="font-medium">${u.levels[lv][0]}</span><span class="text-muted">${c.date} · ${c.score}/40</span></div><div class="mt-1 h-2 overflow-hidden rounded-full bg-calm-soft"><div class="h-full rounded-full" style="width:${(c.score / 40) * 100}%;background:${levelColor[lv]}"></div></div></li>`; }).join('')
+      : `<li class="text-muted">${u.none}</li>`;
+    document.getElementById('sessions')!.innerHTML = d.sessions.length
+      ? [...d.sessions].reverse().slice(0, 10).map((s) => `<li class="flex justify-between gap-3 border-b border-line pb-2 text-sm last:border-0"><span class="font-medium">${u.tools[s.tool as keyof typeof u.tools]?.[0] ?? esc(s.tool)}</span><span class="text-muted">${s.date}${s.before != null && s.after != null ? ` · ${s.before} → ${s.after}` : ''}</span></li>`).join('')
+      : `<li class="text-muted">${u.none}</li>`;
+  }
+
+  const download = (name: string, text: string, type: string) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  const q = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  document.getElementById('csv')!.addEventListener('click', () => {
+    const d = load();
+    const rows = [['type', 'date', 'value', 'detail'],
+      ...d.checkins.map((c) => ['checkin', c.date, c.mood, [c.sleep != null ? `sleep ${c.sleep}h` : '', c.note ?? ''].filter(Boolean).join(' · ')]),
+      ...d.checks.map((c) => ['pss10', c.date, c.score, c.triggers.join(' ')]),
+      ...d.sessions.map((s) => ['session', s.date, s.after ?? '', `${s.tool} before ${s.before ?? '-'}`])];
+    download(`calm-desk-${today()}.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\n'), 'text/csv');
+  });
+  document.getElementById('backup')!.addEventListener('click', () => download(`calm-desk-backup-${today()}.json`, JSON.stringify(load(), null, 2), 'application/json'));
+  document.getElementById('restore')!.addEventListener('change', async (e) => {
+    const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (!Array.isArray(d.checkins) || !Array.isArray(d.checks) || !Array.isArray(d.sessions)) throw new Error('bad file');
+      save(d); document.getElementById('msg')!.textContent = u.restored; render();
+    } catch { document.getElementById('msg')!.textContent = '✕'; }
+  });
+  document.getElementById('wipe')!.addEventListener('click', () => { if (confirm(u.confirmDelete)) { clearAll(); render(); } });
+  render();
+</script>

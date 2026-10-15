@@ -1,0 +1,218 @@
+---
+import { t, type Lang } from '../data/i18n';
+import Breath from './Breath.astro';
+import Rating from './Rating.astro';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const u = t(lang);
+const tools = Object.entries(u.tools) as [keyof typeof u.tools, [string, string]][];
+const result = 'hidden mt-5 rounded-2xl bg-calm-soft p-4 text-center font-medium';
+---
+<section class="pt-6">
+  <h1 class="text-4xl font-semibold tracking-tight">{u.reliefTitle}</h1>
+  <p class="mt-3 max-w-2xl text-lg text-muted">{u.reliefIntro}</p>
+  <nav class="mt-6 flex flex-wrap gap-2" aria-label={u.reliefTitle}>
+    {tools.map(([k, [name]]) => <a href={`#${k}`} class="rounded-full border border-line bg-card px-4 py-2 text-sm hover:border-calm">{name}</a>)}
+  </nav>
+</section>
+
+<div class="mt-8 grid gap-6 lg:grid-cols-2">
+  <section id="box" class="card scroll-mt-6 p-6" data-tool="box">
+    <h2 class="text-2xl font-semibold">{u.tools.box[0]}</h2><p class="mt-1 text-muted">{u.tools.box[1]}</p>
+    <div class="mt-4"><Breath lang={lang} id="box" pattern={[4, 4, 4, 4]} cycles={8} sound /></div>
+    <p data-result class={result} role="status"></p>
+  </section>
+
+  <section id="relax" class="card scroll-mt-6 p-6" data-tool="relax">
+    <h2 class="text-2xl font-semibold">{u.tools.relax[0]}</h2><p class="mt-1 text-muted">{u.tools.relax[1]}</p>
+    <div class="mt-4"><Breath lang={lang} id="relax" pattern={[4, 7, 8, 0]} cycles={6} sound /></div>
+    <p data-result class={result} role="status"></p>
+  </section>
+
+  <section id="ground" class="card scroll-mt-6 p-6">
+    <h2 class="text-2xl font-semibold">{u.tools.ground[0]}</h2><p class="mt-1 text-muted">{u.tools.ground[1]}</p>
+    <div class="mt-6 grid min-h-56 place-items-center text-center">
+      <button type="button" class="btn btn-calm" data-g-start>{u.start}</button>
+      <div data-g-run hidden>
+        <p class="text-5xl font-semibold text-calm" data-g-n></p>
+        <p class="mt-2 text-xl font-medium" data-g-text aria-live="polite"></p>
+        <div class="mt-5 flex justify-center gap-2" data-g-dots></div>
+        <button type="button" class="btn btn-line mt-6" data-g-next>{u.groundNext}</button>
+      </div>
+      <p data-g-done hidden class="text-2xl font-semibold text-leaf">{u.groundDone}</p>
+    </div>
+    <p data-result class={result} role="status"></p>
+  </section>
+
+  <section id="bubbles" class="card scroll-mt-6 p-6">
+    <h2 class="text-2xl font-semibold">{u.tools.bubbles[0]}</h2><p class="mt-1 text-muted">{u.tools.bubbles[1]}</p>
+    <div class="relative mt-5 h-72 overflow-hidden rounded-2xl bg-gradient-to-b from-calm-soft to-bg" data-b-area>
+      <button type="button" class="btn btn-calm absolute inset-0 m-auto h-fit w-fit" data-b-start>{u.start}</button>
+    </div>
+    <p class="mt-3 flex justify-between text-sm text-muted"><span data-b-count></span><span data-b-time></span></p>
+    <p data-result class={result} role="status"></p>
+  </section>
+
+  <section id="sweep" class="card scroll-mt-6 p-6">
+    <h2 class="text-2xl font-semibold">{u.tools.sweep[0]}</h2><p class="mt-1 text-muted">{u.tools.sweep[1]}</p>
+    <form class="mt-5" data-s-form><input class="field" maxlength="80" placeholder={u.worryPh} aria-label={u.worryPh} /></form>
+    <ul class="mt-4 flex min-h-24 flex-wrap content-start gap-2" data-s-list></ul>
+    <button type="button" class="btn btn-calm mt-4" data-s-go disabled>{u.sweepBtn}</button>
+    <p data-s-done hidden class="mt-4 font-medium text-leaf">{u.swept}</p>
+    <p data-result class={result} role="status"></p>
+  </section>
+
+  <section id="focus" class="card scroll-mt-6 p-6">
+    <h2 class="text-2xl font-semibold">{u.tools.focus[0]}</h2><p class="mt-1 text-muted">{u.tools.focus[1]}</p>
+    <div class="mt-6 text-center">
+      <p class="text-sm font-medium uppercase tracking-widest text-muted" data-f-mode data-work={u.work} data-rest={u.rest}>{u.work}</p>
+      <p class="mt-2 text-7xl font-semibold tabular-nums" data-f-time aria-live="off">25:00</p>
+      <div class="mx-auto mt-4 h-2 max-w-xs overflow-hidden rounded-full bg-calm-soft"><div class="h-full w-0 rounded-full bg-calm" data-f-bar></div></div>
+      <div class="mt-6 flex justify-center gap-3">
+        <button type="button" class="btn btn-calm min-w-32" data-f-go data-start={u.start} data-stop={u.stop}>{u.start}</button>
+        <button type="button" class="btn btn-line" data-f-reset>{u.reset}</button>
+      </div>
+    </div>
+    <p data-result class={result} role="status"></p>
+  </section>
+</div>
+
+<Rating lang={lang} />
+
+<script>
+  import { begin, end, isOpen } from '../lib/session';
+  import { ui } from '../data/i18n';
+  const u = ui[document.documentElement.lang === 'si' ? 'si' : 'en'];
+  const $ = <T extends HTMLElement = HTMLElement>(root: ParentNode, s: string) => root.querySelector<T>(s)!;
+
+  /* breathing: ask before the orb starts, ask after it finishes or is stopped */
+  document.querySelectorAll<HTMLElement>('[data-tool]').forEach((sec) => {
+    const tool = sec.dataset.tool!;
+    const btn = $<HTMLButtonElement>(sec, '[data-toggle]');
+    let bypass = false;
+    btn.addEventListener('click', async (e) => {
+      if (bypass) { bypass = false; return; }
+      if (isOpen(tool)) { setTimeout(() => end(tool)); return; } // this click stops it
+      e.stopImmediatePropagation();
+      await begin(tool);
+      bypass = true; btn.click();
+    }, { capture: true });
+    sec.addEventListener('breath:done', () => end(tool));
+  });
+
+  /* 5-4-3-2-1 grounding */
+  {
+    const sec = document.getElementById('ground')!;
+    const run = $(sec, '[data-g-run]'); const dots = $(sec, '[data-g-dots]'); const next = $<HTMLButtonElement>(sec, '[data-g-next]');
+    let step = 0;
+    const show = () => {
+      const n = 5 - step;
+      $(sec, '[data-g-n]').textContent = String(n);
+      $(sec, '[data-g-text]').textContent = u.groundSteps[step];
+      dots.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'size-9 rounded-full border-2 border-calm transition-colors aria-pressed:bg-calm';
+        b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', String(i + 1));
+        b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+        dots.append(b);
+      }
+    };
+    $(sec, '[data-g-start]').addEventListener('click', async (e) => {
+      await begin('ground');
+      (e.target as HTMLElement).hidden = true; $(sec, '[data-g-done]').hidden = true; run.hidden = false; step = 0; show();
+    });
+    next.addEventListener('click', () => {
+      step++;
+      if (step < 5) return show();
+      run.hidden = true; $(sec, '[data-g-done]').hidden = false;
+      const again = $(sec, '[data-g-start]'); again.hidden = false;
+      end('ground');
+    });
+  }
+
+  /* bubble pop: 60 seconds */
+  {
+    const sec = document.getElementById('bubbles')!;
+    const area = $(sec, '[data-b-area]'); const start = $<HTMLButtonElement>(sec, '[data-b-start]');
+    const count = $(sec, '[data-b-count]'); const time = $(sec, '[data-b-time]');
+    let popped = 0; let left = 0; let spawn = 0; let clock = 0;
+    const colors = ['#4a5fd1', '#8f9dff', '#f2b880', '#3f9d76', '#72c9a2'];
+    const bubble = () => {
+      const b = document.createElement('button');
+      const size = 36 + Math.random() * 44;
+      b.type = 'button'; b.setAttribute('aria-label', 'bubble');
+      b.className = 'absolute rounded-full transition-[transform,opacity] duration-200';
+      Object.assign(b.style, { width: `${size}px`, height: `${size}px`, left: `${Math.random() * (area.clientWidth - size)}px`, top: `${area.clientHeight}px`,
+        background: `radial-gradient(circle at 30% 30%, #fffc 0 12%, ${colors[Math.floor(Math.random() * colors.length)]}aa 60%)`, boxShadow: 'inset 0 0 0 2px #fff6' });
+      area.append(b);
+      const rise = b.animate([{ transform: 'translateY(0)' }, { transform: `translateY(-${area.clientHeight + size + 20}px)` }], { duration: 5000 + Math.random() * 4000, easing: 'linear' });
+      rise.onfinish = () => b.remove();
+      b.onclick = () => { popped++; count.textContent = u.popped(popped); rise.pause(); b.style.transform += ' scale(1.6)'; b.style.opacity = '0'; setTimeout(() => b.remove(), 200); };
+    };
+    start.addEventListener('click', async () => {
+      await begin('bubbles');
+      start.hidden = true; popped = 0; left = 60; count.textContent = u.popped(0); time.textContent = `${left}s ${u.timeLeft}`;
+      spawn = window.setInterval(bubble, 450);
+      clock = window.setInterval(() => {
+        left--; time.textContent = `${left}s ${u.timeLeft}`;
+        if (left > 0) return;
+        clearInterval(spawn); clearInterval(clock);
+        setTimeout(() => { area.querySelectorAll('button:not([data-b-start])').forEach((b) => b.remove()); start.hidden = false; end('bubbles'); }, 600);
+      }, 1000);
+    });
+  }
+
+  /* mind sweep */
+  {
+    const sec = document.getElementById('sweep')!;
+    const form = $<HTMLFormElement>(sec, '[data-s-form]'); const input = form.querySelector('input')!;
+    const list = $(sec, '[data-s-list]'); const go = $<HTMLButtonElement>(sec, '[data-s-go]');
+    input.addEventListener('focus', async () => { if (!isOpen('sweep') && !list.children.length) { input.blur(); await begin('sweep'); input.focus(); } });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = input.value.trim(); if (!v) return;
+      const li = document.createElement('li');
+      li.className = 'rounded-full bg-sand/40 px-4 py-2'; li.textContent = v;
+      list.append(li); input.value = ''; go.disabled = false; $(sec, '[data-s-done]').hidden = true;
+    });
+    go.addEventListener('click', () => {
+      const items = [...list.children] as HTMLElement[];
+      items.forEach((li, i) => li.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateX(120%) rotate(8deg)', opacity: 0 }], { duration: 600, delay: i * 120, easing: 'ease-in', fill: 'forwards' }));
+      go.disabled = true;
+      setTimeout(() => { list.innerHTML = ''; $(sec, '[data-s-done]').hidden = false; end('sweep'); }, 600 + items.length * 120);
+    });
+  }
+
+  /* focus timer (Pomodoro): 25 minutes work, 5 minutes break */
+  {
+    const sec = document.getElementById('focus')!;
+    const go = $<HTMLButtonElement>(sec, '[data-f-go]'); const mode = $(sec, '[data-f-mode]');
+    const time = $(sec, '[data-f-time]'); const bar = $(sec, '[data-f-bar]');
+    const WORK = 25 * 60; const REST = 5 * 60;
+    const title = document.title;
+    let resting = false; let left = WORK; let timer = 0; let endsAt = 0;
+    const paint = () => {
+      const m = Math.floor(left / 60); const s = left % 60;
+      time.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      bar.style.width = `${(1 - left / (resting ? REST : WORK)) * 100}%`;
+      mode.textContent = resting ? mode.dataset.rest! : mode.dataset.work!;
+      document.title = timer ? `${time.textContent} · ${mode.textContent} · ${title}` : title;
+    };
+    const chime = () => { try { const c = new AudioContext(); const o = c.createOscillator(); const g = c.createGain(); o.frequency.value = 660; g.gain.setValueAtTime(0.2, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 1.2); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + 1.2); } catch { /* no audio */ } };
+    const tick = () => {
+      left = Math.max(0, Math.round((endsAt - Date.now()) / 1000)); paint();
+      if (left > 0) return;
+      chime();
+      if (!resting) { resting = true; left = REST; endsAt = Date.now() + REST * 1000; paint(); end('focus'); }
+      else { stop(); resting = false; left = WORK; paint(); }
+    };
+    const stop = () => { clearInterval(timer); timer = 0; go.textContent = go.dataset.start!; };
+    go.addEventListener('click', async () => {
+      if (timer) return stop();
+      if (!resting && left === WORK && !isOpen('focus')) await begin('focus');
+      endsAt = Date.now() + left * 1000; timer = window.setInterval(tick, 500); go.textContent = go.dataset.stop!;
+    });
+    $(sec, '[data-f-reset]').addEventListener('click', () => { stop(); resting = false; left = WORK; paint(); });
+  }
+</script>

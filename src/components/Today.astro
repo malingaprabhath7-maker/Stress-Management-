@@ -1,0 +1,80 @@
+---
+import { t, page, type Lang } from '../data/i18n';
+import Breath from './Breath.astro';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const u = t(lang);
+---
+<section class="grid items-center gap-10 pt-6 md:grid-cols-[1.1fr_1fr]">
+  <div>
+    <p class="text-muted" data-greet data-hello={u.hello}>{u.hello}</p>
+    <h1 class="mt-2 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">{u.breathe}</h1>
+    <p class="mt-4 max-w-md text-lg text-muted">{u.tagline}.</p>
+  </div>
+  <Breath lang={lang} id="one" pattern={[4, 0, 6, 0]} cycles={3} />
+</section>
+
+<section class="mt-14 grid gap-6 md:grid-cols-[1.2fr_1fr]">
+  <form id="checkin" class="card space-y-5 p-6">
+    <h2 class="text-xl font-semibold">{u.hello}</h2>
+    <div><label class="label" for="c-name">{u.name}</label><input id="c-name" name="name" class="field" placeholder={u.namePh} autocomplete="given-name" /></div>
+    <div>
+      <label class="label" for="c-mood">{u.mood}: <output id="c-mood-out" class="text-xl font-semibold text-calm">5</output></label>
+      <input id="c-mood" name="mood" type="range" min="0" max="10" value="5" aria-describedby="c-mood-hint" />
+      <p id="c-mood-hint" class="mt-1 text-xs text-muted">{u.moodHint}</p>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-[8rem_1fr]">
+      <div><label class="label" for="c-sleep">{u.sleep}</label><input id="c-sleep" name="sleep" type="number" min="0" max="16" step="0.5" class="field" /></div>
+      <div><label class="label" for="c-note">{u.note}</label><input id="c-note" name="note" maxlength="140" class="field" /></div>
+    </div>
+    <button class="btn btn-calm">{u.saveCheckin}</button>
+    <p id="c-saved" hidden class="text-sm font-medium text-leaf" role="status">{u.savedCheckin}</p>
+  </form>
+  <div class="space-y-6">
+    <div class="card p-6" id="last" data-score-tpl={u.score(0)}>
+      <h2 class="text-xl font-semibold">{u.lastCheck}</h2>
+      <p id="last-none" class="mt-2 text-muted">{u.noCheck}</p>
+      <div id="last-has" hidden class="mt-3"><p id="last-level" class="text-2xl font-semibold"></p><p id="last-score" class="text-muted"></p></div>
+      <a href={page(lang, 'check')} class="btn btn-line mt-5">{u.doCheck}</a>
+    </div>
+    <p id="streak" hidden class="card p-5 text-center text-lg font-medium" data-tpl={u.streak(0)}></p>
+  </div>
+</section>
+<script>
+  import { load, update, today, streak, level } from '../lib/store';
+  import { ui } from '../data/i18n';
+  const L = document.documentElement.lang === 'si' ? 'si' : 'en';
+  const u = ui[L];
+  const form = document.getElementById('checkin') as HTMLFormElement;
+  const mood = document.getElementById('c-mood') as HTMLInputElement;
+  const out = document.getElementById('c-mood-out')!;
+  mood.addEventListener('input', () => (out.textContent = mood.value));
+
+  function render() {
+    const d = load();
+    const greet = document.querySelector<HTMLElement>('[data-greet]')!;
+    greet.textContent = d.name ? `${L === 'si' ? 'ආයුබෝවන්' : 'Hello'}, ${d.name}.` : greet.dataset.hello!;
+    (form.elements.namedItem('name') as HTMLInputElement).value = d.name ?? '';
+    const c = d.checkins.find((x) => x.date === today());
+    if (c) { mood.value = String(c.mood); out.textContent = mood.value; (form.elements.namedItem('sleep') as HTMLInputElement).value = c.sleep != null ? String(c.sleep) : ''; (form.elements.namedItem('note') as HTMLInputElement).value = c.note ?? ''; }
+    const last = d.checks.at(-1);
+    document.getElementById('last-none')!.hidden = !!last;
+    document.getElementById('last-has')!.hidden = !last;
+    if (last) { document.getElementById('last-level')!.textContent = u.levels[level(last.score)][0]; document.getElementById('last-score')!.textContent = `${u.score(last.score)} · ${last.date}`; }
+    const s = streak(d); const el = document.getElementById('streak')!;
+    el.hidden = s < 1; el.textContent = u.streak(s);
+  }
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = new FormData(form);
+    update((d) => {
+      d.name = String(f.get('name') ?? '').trim().slice(0, 40) || undefined;
+      const sleep = f.get('sleep') ? Number(f.get('sleep')) : undefined;
+      const entry = { date: today(), mood: Number(f.get('mood')), sleep, note: String(f.get('note') ?? '').trim() || undefined };
+      d.checkins = [...d.checkins.filter((x) => x.date !== entry.date), entry].sort((a, b) => a.date.localeCompare(b.date));
+    });
+    document.getElementById('c-saved')!.hidden = false;
+    render();
+  });
+  render();
+</script>

@@ -1,0 +1,19 @@
+---
+// Before/after stress rating dialog shared by every relief tool.
+import { t, type Lang } from '../data/i18n';
+interface Props { lang: Lang }
+const u = t(Astro.props.lang);
+---
+<dialog id="rate" class="m-auto w-[min(92vw,26rem)] rounded-3xl border border-line bg-card p-6 text-ink backdrop:bg-black/50">
+  <form method="dialog" class="space-y-5">
+    <p id="rate-q" class="text-lg font-medium"></p>
+    <div>
+      <input id="rate-v" type="range" min="0" max="10" value="5" aria-describedby="rate-out" />
+      <p class="mt-1 flex justify-between text-sm text-muted"><span>0</span><output id="rate-out" class="text-2xl font-semibold text-calm">5</output><span>10</span></p>
+    </div>
+    <div class="flex justify-end gap-2">
+      <button value="skip" class="btn btn-line">{u.skip}</button>
+      <button value="ok" class="btn btn-calm">{u.save}</button>
+    </div>
+  </form>
+</dialog>

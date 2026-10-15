@@ -1,0 +1,67 @@
+---
+// A breathing orb. pattern = seconds for [in, hold, out, hold]; cycles = how many breaths before it stops.
+import { t, url, type Lang } from '../data/i18n';
+interface Props { lang: Lang; id: string; pattern: [number, number, number, number]; cycles: number; sound?: boolean }
+const { lang, id, pattern, cycles, sound = false } = Astro.props;
+const u = t(lang);
+---
+<div class="flex flex-col items-center gap-6" data-breath={id} data-pattern={pattern.join(',')} data-cycles={cycles}
+  data-in={u.breatheIn} data-hold={u.hold} data-out={u.breatheOut} data-start={u.start} data-stop={u.stop}>
+  <div class="relative grid place-items-center py-4">
+    <div class="orb" data-orb></div>
+    <p class="absolute text-center text-lg font-medium text-white drop-shadow" aria-live="polite" data-phase></p>
+  </div>
+  <p class="text-sm text-muted" data-count></p>
+  <div class="flex flex-wrap items-center justify-center gap-3">
+    <button type="button" class="btn btn-calm min-w-32" data-toggle>{u.start}</button>
+    {sound && (
+      <label class="flex items-center gap-2 text-sm text-muted">{u.sound}
+        <select class="field w-auto py-1.5" data-sound>
+          <option value="">{u.soundOff}</option>
+          {Object.entries(u.sounds).map(([k, v]) => <option value={url(`sounds/${k}.mp3`)}>{v}</option>)}
+        </select>
+      </label>
+    )}
+  </div>
+</div>
+<script>
+  document.querySelectorAll<HTMLElement>('[data-breath]').forEach((root) => {
+    if (root.dataset.ready) return; root.dataset.ready = '1';
+    const [i, h1, o, h2] = root.dataset.pattern!.split(',').map(Number);
+    const total = Number(root.dataset.cycles);
+    const orb = root.querySelector<HTMLElement>('[data-orb]')!;
+    const phase = root.querySelector<HTMLElement>('[data-phase]')!;
+    const count = root.querySelector<HTMLElement>('[data-count]')!;
+    const btn = root.querySelector<HTMLButtonElement>('[data-toggle]')!;
+    const soundSel = root.querySelector<HTMLSelectElement>('[data-sound]');
+    const audio = new Audio(); audio.loop = true; audio.volume = 0.5;
+    let timer = 0; let running = false; let done = 0;
+    const step = (label: string, scale: number, secs: number, next: () => void) => {
+      phase.textContent = `${label} · ${secs}`;
+      orb.style.setProperty('--d', `${secs}s`); orb.style.setProperty('--s', String(scale));
+      let left = secs;
+      const tick = () => { left--; if (left > 0) { phase.textContent = `${label} · ${left}`; timer = window.setTimeout(tick, 1000); } else next(); };
+      timer = window.setTimeout(tick, 1000);
+    };
+    const cycle = () => {
+      if (!running) return;
+      if (done >= total) return finish(true);
+      step(root.dataset.in!, 1, i, () => (h1 ? step(root.dataset.hold!, 1, h1, out) : out()));
+    };
+    const out = () => step(root.dataset.out!, 0.55, o, () => { done++; count.textContent = `${done} / ${total}`; h2 ? step(root.dataset.hold!, 0.55, h2, cycle) : cycle(); });
+    const finish = (completed: boolean) => {
+      running = false; clearTimeout(timer); audio.pause();
+      orb.style.setProperty('--d', '1s'); orb.style.setProperty('--s', '.55');
+      phase.textContent = ''; btn.textContent = root.dataset.start!;
+      if (completed) root.dispatchEvent(new CustomEvent('breath:done', { bubbles: true }));
+    };
+    btn.addEventListener('click', () => {
+      if (running) return finish(false);
+      root.dispatchEvent(new CustomEvent('breath:start', { bubbles: true }));
+      running = true; done = 0; count.textContent = `0 / ${total}`; btn.textContent = root.dataset.stop!;
+      if (soundSel?.value) { audio.src = soundSel.value; audio.play().catch(() => {}); }
+      cycle();
+    });
+    soundSel?.addEventListener('change', () => { if (running && soundSel.value) { audio.src = soundSel.value; audio.play().catch(() => {}); } else audio.pause(); });
+  });
+</script>

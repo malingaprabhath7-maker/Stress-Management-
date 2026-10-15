@@ -1,0 +1,32 @@
+---
+import { t, helplines, type Lang } from '../data/i18n';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const u = t(lang);
+---
+<section class="mx-auto max-w-3xl pt-6">
+  <h1 class="text-4xl font-semibold tracking-tight">{u.helpTitle}</h1>
+  <p class="mt-3 text-lg leading-relaxed text-muted">{u.helpIntro}</p>
+
+  <div class="mt-8 rounded-3xl border-2 border-alert/40 bg-alert/10 p-6">
+    <h2 class="text-xl font-semibold text-alert">{u.urgent}</h2>
+    <p class="mt-2 text-lg">{u.urgentText}</p>
+    <div class="mt-4 flex flex-wrap gap-3">
+      <a href="tel:1990" class="btn bg-alert text-white">1990</a>
+      <a href="tel:119" class="btn btn-line">119</a>
+    </div>
+  </div>
+
+  <h2 class="mt-10 text-2xl font-semibold">{u.lines}</h2>
+  <ul class="mt-4 grid gap-4 sm:grid-cols-2">
+    {helplines.map((h) => (
+      <li class="card flex flex-col p-5">
+        <p class="text-lg font-semibold">{lang === 'si' ? h.nameSi : h.name}</p>
+        <p class="mt-1 flex-1 text-sm text-muted">{lang === 'si' ? h.noteSi : h.note}</p>
+        <a href={`tel:${h.tel}`} class="btn btn-calm mt-4 self-start">{u.call} {h.display ?? h.tel}</a>
+      </li>
+    ))}
+  </ul>
+
+  <p class="card mt-10 p-5 text-muted">{u.install}</p>
+</section>

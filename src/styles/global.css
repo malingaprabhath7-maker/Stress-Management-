@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Lexend", "Noto Sans Sinhala", system-ui, sans-serif;
+  --color-bg: #f5f6fb;
+  --color-card: #ffffff;
+  --color-ink: #1b2140;
+  --color-muted: #5f6585;
+  --color-line: #dfe2ef;
+  --color-calm: #4a5fd1;
+  --color-calm-soft: #e5e9ff;
+  --color-sand: #f2b880;
+  --color-leaf: #3f9d76;
+  --color-alert: #c2410c;
+}
+.dark {
+  --color-bg: #10132a;
+  --color-card: #181c38;
+  --color-ink: #e7e9f7;
+  --color-muted: #9da3c6;
+  --color-line: #2a3058;
+  --color-calm: #8f9dff;
+  --color-calm-soft: #232a5c;
+  --color-leaf: #72c9a2;
+  --color-alert: #fb923c;
+}
+body { background: var(--color-bg); color: var(--color-ink); }
+:focus-visible { outline: 2px solid var(--color-sand); outline-offset: 3px; border-radius: 8px; }
+.card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: 1.5rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 999px; padding: .7rem 1.3rem; font-weight: 500; transition: background-color .15s, border-color .15s, opacity .15s; }
+.btn-calm { background: var(--color-calm); color: #fff; }
+.dark .btn-calm { color: #10132a; }
+.btn-calm:hover { opacity: .9; }
+.btn-line { border: 1px solid var(--color-line); background: var(--color-card); }
+.btn-line:hover { border-color: var(--color-ink); }
+.field { width: 100%; border: 1px solid var(--color-line); background: var(--color-card); border-radius: .9rem; padding: .65rem .85rem; }
+.label { display: block; margin-bottom: .4rem; font-size: .9rem; font-weight: 500; color: var(--color-muted); }
+input[type="range"] { accent-color: var(--color-calm); width: 100%; }
+
+/* the breathing orb: its size is driven by the --s custom property from script */
+.orb { --s: .55; width: min(64vw, 16rem); aspect-ratio: 1; border-radius: 50%; transform: scale(var(--s)); transition: transform var(--d, 4s) ease-in-out;
+  background: radial-gradient(circle at 35% 30%, #fff8 0, transparent 40%), radial-gradient(circle, var(--color-calm) 0%, color-mix(in oklab, var(--color-calm) 55%, var(--color-sand)) 100%);
+  box-shadow: 0 30px 80px -20px color-mix(in oklab, var(--color-calm) 60%, transparent); }
+@media (prefers-reduced-motion: reduce) { .orb { transition: none; } }

@@ -1,0 +1,107 @@
+---
+import { t, PSS, page, type Lang } from '../data/i18n';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const u = t(lang);
+const p = PSS[lang];
+---
+<section class="mx-auto max-w-2xl pt-6">
+  <h1 class="text-4xl font-semibold tracking-tight">{u.checkTitle}</h1>
+  <p class="mt-3 text-lg text-muted">{u.checkIntro}</p>
+
+  <form id="quiz" class="card mt-8 p-6 sm:p-8">
+    <div class="h-1.5 overflow-hidden rounded-full bg-calm-soft"><div id="bar" class="h-full rounded-full bg-calm transition-all" style="width:10%"></div></div>
+    {p.items.map((item, i) => (
+      <fieldset data-q={i} hidden={i > 0} class="mt-6">
+        <legend class="text-sm text-muted">{u.q(i + 1, p.items.length)}</legend>
+        <p class="mt-2 text-sm text-muted">{p.stem}</p>
+        <p class="mt-1 text-xl font-medium leading-snug">{item}</p>
+        <div class="mt-5 grid gap-2">
+          {p.scale.map((s, v) => (
+            <label class="flex cursor-pointer items-center gap-3 rounded-2xl border border-line px-4 py-3 has-[:checked]:border-calm has-[:checked]:bg-calm-soft">
+              <input type="radio" name={`q${i}`} value={v} required class="accent-calm" />{s}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    ))}
+    <fieldset data-q="triggers" hidden class="mt-6">
+      <legend class="text-xl font-medium">{u.triggers}</legend>
+      <div class="mt-4 flex flex-wrap gap-2">
+        {Object.entries(u.triggerList).map(([k, v]) => (
+          <label class="cursor-pointer"><input type="checkbox" name="trigger" value={k} class="peer sr-only" /><span class="inline-block rounded-full border border-line px-4 py-2 peer-checked:border-calm peer-checked:bg-calm peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-sand">{v}</span></label>
+        ))}
+      </div>
+    </fieldset>
+    <div class="mt-8 flex justify-between gap-3">
+      <button type="button" id="prev" class="btn btn-line" hidden>{u.back}</button>
+      <button type="button" id="next" class="btn btn-calm ml-auto" disabled>{u.next}</button>
+    </div>
+  </form>
+
+  <section id="result" hidden class="mt-8 space-y-6">
+    <div class="card p-6 sm:p-8">
+      <p class="text-muted">{u.result}</p>
+      <p id="r-level" class="mt-1 text-4xl font-semibold"></p>
+      <p id="r-score" class="mt-1 text-lg text-muted"></p>
+      <div class="mt-5 h-3 overflow-hidden rounded-full bg-calm-soft"><div id="r-bar" class="h-full rounded-full"></div></div>
+      <p id="r-text" class="mt-5 text-lg leading-relaxed"></p>
+      <p class="mt-4 text-sm text-muted">{u.disclaimer}</p>
+    </div>
+    <div id="r-tips" class="card p-6" hidden><h2 class="text-xl font-semibold">{u.tips}</h2><ul class="mt-3 space-y-2"></ul></div>
+    <a id="r-try" class="card flex items-center justify-between gap-4 p-6 hover:border-calm" href={page(lang, 'relief')}>
+      <span><span class="text-sm text-muted">{u.recommended}</span><br /><span id="r-tool" class="text-xl font-semibold"></span></span><span class="text-2xl text-calm" aria-hidden="true">→</span>
+    </a>
+  </section>
+</section>
+<script>
+  import { update, pssScore, level, today } from '../lib/store';
+  import { ui, PSS } from '../data/i18n';
+  const L = document.documentElement.lang === 'si' ? 'si' : 'en';
+  const u = ui[L];
+  const form = document.getElementById('quiz') as HTMLFormElement;
+  const steps = [...form.querySelectorAll<HTMLElement>('[data-q]')];
+  const next = document.getElementById('next') as HTMLButtonElement;
+  const prev = document.getElementById('prev') as HTMLButtonElement;
+  let at = 0;
+  const answered = () => steps[at].dataset.q === 'triggers' || !!form.querySelector(`input[name="q${at}"]:checked`);
+  function show() {
+    steps.forEach((s, i) => (s.hidden = i !== at));
+    prev.hidden = at === 0;
+    next.disabled = !answered();
+    next.textContent = at === steps.length - 1 ? u.seeResult : u.next;
+    (document.getElementById('bar') as HTMLElement).style.width = `${((at + 1) / steps.length) * 100}%`;
+  }
+  form.addEventListener('change', (e) => {
+    next.disabled = !answered();
+    // move on automatically after choosing an answer
+    if ((e.target as HTMLInputElement).type === 'radio') setTimeout(() => { if (at < steps.length - 1) { at++; show(); } }, 250);
+  });
+  prev.addEventListener('click', () => { at--; show(); });
+  next.addEventListener('click', () => { if (at < steps.length - 1) { at++; show(); } else finish(); });
+
+  function finish() {
+    const f = new FormData(form);
+    const answers = PSS.en.items.map((_, i) => Number(f.get(`q${i}`)));
+    const score = pssScore(answers, PSS.reverse);
+    const triggers = f.getAll('trigger').map(String);
+    update((d) => { d.checks.push({ date: today(), score, answers, triggers }); });
+    const lv = level(score);
+    form.hidden = true;
+    document.getElementById('result')!.hidden = false;
+    document.getElementById('r-level')!.textContent = u.levels[lv][0];
+    document.getElementById('r-score')!.textContent = u.score(score);
+    document.getElementById('r-text')!.textContent = u.levels[lv][1];
+    const bar = document.getElementById('r-bar')!;
+    bar.style.width = `${(score / 40) * 100}%`;
+    bar.style.background = lv === 'low' ? 'var(--color-leaf)' : lv === 'moderate' ? 'var(--color-sand)' : 'var(--color-alert)';
+    const tips = document.getElementById('r-tips')!;
+    tips.hidden = triggers.length === 0;
+    tips.querySelector('ul')!.innerHTML = triggers.map((k) => `<li class="flex gap-3"><span class="mt-2 size-2 shrink-0 rounded-full bg-sand"></span><span><strong>${u.triggerList[k as keyof typeof u.triggerList]}.</strong> ${u.tipText[k as keyof typeof u.tipText]}</span></li>`).join('');
+    const tool = lv === 'low' ? 'bubbles' : lv === 'moderate' ? 'box' : 'relax';
+    document.getElementById('r-tool')!.textContent = u.tools[tool][0];
+    (document.getElementById('r-try') as HTMLAnchorElement).href += `#${tool}`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  show();
+</script>
