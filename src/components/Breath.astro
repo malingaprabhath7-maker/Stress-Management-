@@ -11,7 +11,7 @@ const u = t(lang);
     <div class="orb" data-orb></div>
     <p class="absolute text-center text-lg font-medium text-white drop-shadow" aria-live="polite" data-phase></p>
   </div>
-  <p class="text-sm text-muted" data-count></p>
+  <p class="text-sm text-muted" data-count>{u.cycles(cycles)}</p>
   <div class="flex flex-wrap items-center justify-center gap-3">
     <button type="button" class="btn btn-calm min-w-32" data-toggle>{u.start}</button>
     {sound && (
